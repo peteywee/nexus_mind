@@ -1,0 +1,132 @@
+# .github/workflows/deploy.yml
+name: Deploy Nexus Ecosystem
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Allows manual trigger for rollbacks or specific deployments
+
+env:
+  # Your existing environment variables (e.g., SSH_HOST, SSH_USER, SSH_KEY_PATH, GHCR_USERNAME, GHCR_TOKEN)
+  SSH_HOST: 134.199.201.64
+  SSH_USER: root
+  APP_DIR: /path/to/your/docker-compose/dir # e.g., /root/nexus_orchestrator_project
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # ... (Your existing Linting & Basic Tests steps) ...
+
+      - name: Build Docker Images
+        run: |
+          docker compose build # Assuming docker-compose.yaml is at root of repo
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Push Docker Images to GHCR
+        run: |
+          # Tag images with commit SHA or version for rollback purposes
+          docker compose push # Or push specific images with tags like ghcr.io/your-user/your-service:latest ghcr.io/your-user/your-service:${{ github.sha }}
+
+      - name: Deploy to Droplet
+        uses: appleboy/ssh-action@v1.0.3 # Or your preferred SSH action
+        with:
+          host: ${{ env.SSH_HOST }}
+          username: ${{ env.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }} # Ensure this secret is set in GitHub
+          script: |
+            cd ${{ env.APP_DIR }}
+            echo "Pulling latest images..."
+            docker compose pull
+            echo "Updating services..."
+            docker compose up -d --remove-orphans
+            echo "Deployment complete."
+
+      # --- Rollback Strategy (Option 1: Manual Trigger with Previous Tag) ---
+      # This requires storing successful deployment tags/commit SHAs
+
+      # --- Rollback Strategy (Option 2: Basic Automated Rollback on Failure) ---
+      # This is more basic and usually implemented in combination with health checks.
+      # This step would run *after* the deploy step and only on failure.
+      - name: Automated Rollback on Failure
+        if: failure() && github.event_name == 'push' # Only rollback on push failures
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.SSH_HOST }}
+          username: ${{ env.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ env.APP_DIR }}
+            echo "Deployment failed. Attempting rollback to previous stable version."
+            # Get the previous successful image tag (this is a conceptual step)
+            # You would need a mechanism to store and retrieve the *last known good* commit SHA or version tag.
+            # This might involve a custom script on the server, or reading a previous deployment log/status file.
+            # For a simple rollback to the image that was running *before* the failed push:
+            # docker compose down --remove-orphans # Stop current failed deployment
+            # docker compose up -d --build # Rebuild and run from local cache (if previous successful images are cached)
+            # OR, better: pull and run a specific *previous* tagged image if you track them.
+            # Example for a specific tag (requires a way to get the last successful tag):
+            # LAST_GOOD_TAG=$(your_script_to_get_last_good_tag.sh) # This script is crucial
+            # docker compose -f docker-compose.yml pull service_name:$(LAST_GOOD_TAG) # Pull previous images
+            # docker compose -f docker-compose.yml up -d --no-build # Deploy previous images
+            # A simpler method for `docker compose` is often to simply restart services,
+            # assuming a health check will eventually fail the new containers and fall back.
+
+            # More robust: use a tool like Watchtower or a custom script to manage image versions.
+            # Or, as a simple fallback, just bring down the new potentially bad services.
+            docker compose stop # Stop the services that just came up from the failed deployment
+            echo "Manual intervention required to revert or fix."
+
+      - name: Notify on Failure
+        if: failure()
+        run: |
+          echo "Deployment to ${{ env.SSH_HOST }} failed for commit ${{ github.sha }}."
+          # Add integration for Slack/Email notification here (e.g., uses: rtCamp/action-slack-notify@v2.2.0)
+
+  # --- Optional: Separate Rollback Job (Manual Trigger) ---
+  rollback:
+    runs-on: ubuntu-latest
+    needs: build-and-deploy # Ensure it runs after deploy attempt
+    if: always() # Always run this job if triggered manually
+    steps:
+      - name: Get Rollback Tag (User Input)
+        id: get_tag
+        run: echo "::set-output name=rollback_tag::${{ github.event.inputs.rollback_tag }}"
+        # This needs to be provided when triggering workflow_dispatch manually
+
+      - name: Checkout Code (Needed if rollback logic relies on old code)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.get_tag.outputs.rollback_tag }} # Checkout the tag for rollback
+
+      - name: Perform Rollback Deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ env.SSH_HOST }}
+          username: ${{ env.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd ${{ env.APP_DIR }}
+            echo "Performing rollback to tag: ${{ steps.get_tag.outputs.rollback_tag }}"
+            docker compose pull # Pull images for the specified rollback tag
+            docker compose up -d --no-build --remove-orphans
+            echo "Rollback complete."
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.rollback_tag != '' }}
+    # Define inputs for workflow_dispatch:
+    # on:
+    #   workflow_dispatch:
+    #     inputs:
+    #       rollback_tag:
+    #         description: 'Git tag or commit SHA to rollback to'
+    #         required: true
+    #         default: 'main' # Or your last stable tag
