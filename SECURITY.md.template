@@ -1,0 +1,60 @@
+# Security Policy for __PROJECT_NAME__
+
+We take the security of our project seriously. We appreciate the efforts of security researchers and the community in helping us maintain a high standard of security. This document outlines our security policy and the process for responsibly reporting vulnerabilities.
+
+## Supported Versions
+
+**Note to maintainer:** Please manually update this section to reflect the versions of your project you are actively supporting. The table below is a generic example.
+
+| Version | Supported          |
+| ------- | ------------------ |
+| `2.0.x` | :white_check_mark: |
+| `1.5.x` | :x:                |
+| `< 1.5` | :x:                |
+
+## Reporting a Vulnerability
+
+**Please do not report security vulnerabilities through public GitHub issues.**
+
+We encourage responsible disclosure. If you discover a security vulnerability, please report it to us privately. This gives us time to address the issue before it becomes public knowledge.
+
+### Preferred Method: GitHub Security Advisories
+
+The best way to report a vulnerability is through **GitHub's private vulnerability reporting feature**. This ensures your report is delivered directly to the repository maintainers in a secure and private manner.
+
+The direct link to report a vulnerability for this project is:
+**`https://github.com/__OWNER__/__REPO__/security/advisories/new`**
+
+### Alternative Method: Email
+
+If you are unable to use GitHub Security Advisories, you can send your report to us via email at **`__SECURITY_CONTACT_EMAIL__`**. Please use a clear subject line, such as "Security Vulnerability Report: __PROJECT_NAME__".
+
+### What to Include in Your Report
+
+To help us triage and validate your finding as quickly as possible, please include the following in your report:
+
+*   A clear description of the vulnerability and its potential impact.
+*   The affected component(s) and version(s).
+*   Step-by-step instructions to reproduce the issue (Proof of Concept).
+*   Any potential mitigations or workarounds you are aware of.
+*   Your name or handle for public credit (if you wish to be credited).
+
+## Our Commitment (What to Expect)
+
+When you report a vulnerability to us, you can expect the following:
+
+1.  **Acknowledgement**: We will acknowledge receipt of your report within 48 hours.
+2.  **Triage**: We will investigate and confirm the vulnerability. We aim to provide an initial assessment of its severity and impact within 5 business days.
+3.  **Communication**: We will maintain an open line of communication with you throughout the process, providing updates on our progress.
+4.  **Resolution**: We will work on a fix for all supported versions. The timeline will depend on the complexity and severity of the issue.
+5.  **Disclosure**: Once the vulnerability is fixed, we will create a public security advisory on GitHub and, if you agree, credit you for your discovery.
+
+## Scope
+
+This security policy applies to the code and infrastructure directly managed by the `__PROJECT_NAME__` team.
+
+## Safe Harbor
+
+We are committed to working with the security community. We will not take legal action against individuals who discover and report security vulnerabilities in good faith and in accordance with this policy.
+
+Thank you for helping keep `__PROJECT_NAME__` and its users safe.
