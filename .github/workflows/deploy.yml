@@ -1,6 +1,11 @@
 # .github/workflows/deploy.yml
 name: Deploy Nexus Ecosystem
 
+permissions:
+  contents: read
+  packages: write
+  actions: read
+
 on:
   push:
     branches:
